@@ -39,7 +39,7 @@ Public Class Form1
     Public intStartCount As Integer = 0 '20140920
     Public intEndCount As Integer = 0 '20140920
 
-    'Public objIniFile As New INIFile("d:\W3Production\HL7Receiver.ini") 'Prod
+    'Public objIniFile As New INIFile("c:\newfeeds\ULHHL7Receiver.ini") 'Prod
     Public objIniFile As New INIFile("C:\ULHTest\ULHHL7Receiver.ini") 'Test
     Public strInputDirectory As String = ""
     Public strProblemDirectory As String = "" '20140910
