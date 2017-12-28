@@ -7,9 +7,9 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{BA83414F-2241-4DB8-B386-C6C1B8B7B5AF}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <StartupObject>KY1ProdReceiver.My.MyApplication</StartupObject>
-    <RootNamespace>KY1ProdReceiver</RootNamespace>
-    <AssemblyName>KY1ProdReceiver</AssemblyName>
+    <StartupObject>ULHReceiver.My.MyApplication</StartupObject>
+    <RootNamespace>ULHReceiver</RootNamespace>
+    <AssemblyName>ULHReceiver</AssemblyName>
     <FileAlignment>512</FileAlignment>
     <MyType>WindowsForms</MyType>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
@@ -29,7 +29,7 @@
     <DefineDebug>true</DefineDebug>
     <DefineTrace>true</DefineTrace>
     <OutputPath>bin\Debug\</OutputPath>
-    <DocumentationFile>KY1ProdReceiver.xml</DocumentationFile>
+    <DocumentationFile>ULHReceiver.xml</DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022,42353,42354,42355</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -38,7 +38,7 @@
     <DefineTrace>true</DefineTrace>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DocumentationFile>KY1ProdReceiver.xml</DocumentationFile>
+    <DocumentationFile>ULHReceiver.xml</DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022,42353,42354,42355</NoWarn>
   </PropertyGroup>
   <ItemGroup>
