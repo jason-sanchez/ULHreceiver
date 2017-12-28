@@ -39,15 +39,17 @@ Public Class Form1
     Public intStartCount As Integer = 0 '20140920
     Public intEndCount As Integer = 0 '20140920
 
-    Public objIniFile As New INIFile("d:\W3Production\HL7Receiver.ini")
+    'Public objIniFile As New INIFile("d:\W3Production\HL7Receiver.ini") 'Prod
+    Public objIniFile As New INIFile("C:\ULHTest\ULHHL7Receiver.ini") 'Test
     Public strInputDirectory As String = ""
     Public strProblemDirectory As String = "" '20140910
     Public counter As Long = 0
-    Public port As Integer = 0
+    Public port As Integer = objIniFile.GetInteger("Settings", "port", "(0)") ' 2203
     Private _server As Sockets.TcpListener
     Private _remoteIPEndPoint As New System.Net.IPEndPoint(System.Net.IPAddress.Any, 0)
     Private _threadReceive As Threading.Thread
-    Dim CommServerListener As New TcpListener(IPAddress.Any, "2203") '20140813
+
+    Dim CommServerListener As New TcpListener(IPAddress.Any, port) '20140813
     Dim Timer2 As New System.Timers.Timer(1000)
 
     '20140214 - add ackamsg string variable to send an updated string in the acknowledgement message.
@@ -268,7 +270,7 @@ Public Class Form1
                 location = 50 '20140929
                 '20151006 - changed ack message to wave3_prod vice wave3_test
                 '20151221 - changed ACK to KY1 Production
-                strAckMessage = "MSH|^~\&|KY1_Prod|Systemax|Systemax|Systemax|" & strAckDTString & "||ACK^O01|" & MessageControlID & "|P|2.3|||||||||" & Chr(13)
+                strAckMessage = "MSH|^~\&|ULH|Systemax|Systemax|Systemax|" & strAckDTString & "||ACK^O01|" & MessageControlID & "|P|2.3|||||||||" & Chr(13)
 
                 If Mid$(strFileText, Len(strFileText) - 1, 1) = Chr(28) And Mid$(strFileText, 1, 1) = Chr(11) Then
                     strAckMessage = strAckMessage & "MSA|AA|" & MessageControlID & "|||||" & vbCrLf
@@ -615,7 +617,7 @@ Public Class Form1
     Public Sub writeToError(ByVal strMsg As String)
         '20140205 - use a text file to log errors instead of the event log
         Dim file As System.IO.StreamWriter
-        Dim tempLogFileName As String = strLogDirectory & "Receiver_log.txt"
+        Dim tempLogFileName As String = strLogDirectory & "ULHReceiver_log.txt"
         file = My.Computer.FileSystem.OpenTextFileWriter(tempLogFileName, True)
         file.WriteLine(DateTime.Now & " : " & strMsg)
         file.Close()
@@ -624,7 +626,7 @@ Public Class Form1
     Public Sub writeToException(ByVal strMsg As String)
         '20140205 - use a text file to log errors instead of the event log
         Dim file As System.IO.StreamWriter
-        Dim tempLogFileName As String = strLogDirectory & "Receiver_Exception_log.txt"
+        Dim tempLogFileName As String = strLogDirectory & "ULHReceiver_Exception_log.txt"
         file = My.Computer.FileSystem.OpenTextFileWriter(tempLogFileName, True)
         file.WriteLine(DateTime.Now & " : " & strMsg)
         file.Close()
