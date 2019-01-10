@@ -39,15 +39,18 @@ Public Class Form1
     Public intStartCount As Integer = 0 '20140920
     Public intEndCount As Integer = 0 '20140920
 
-    'Public objIniFile As New INIFile("c:\newfeeds\ULHHL7Receiver.ini") 'Prod
-    Public objIniFile As New INIFile("C:\ULHTest\ULHHL7Receiver.ini") 'Test
+    Public objIniFile As New INIFile("c:\newfeeds\ULHHL7Receiver.ini") 'Prod
+    'Public objIniFile As New INIFile("C:\ULHTest\ULHHL7Receiver.ini") 'Test
     Public strInputDirectory As String = ""
     Public strProblemDirectory As String = "" '20140910
     Public counter As Long = 0
-    Public port As Integer = objIniFile.GetInteger("Settings", "port", "(0)") ' 2203
+    Public port As Integer = objIniFile.GetInteger("Settings", "port", "(0)")
     Private _server As Sockets.TcpListener
     Private _remoteIPEndPoint As New System.Net.IPEndPoint(System.Net.IPAddress.Any, 0)
     Private _threadReceive As Threading.Thread
+    Public bounceTime As Integer = 0
+    Public threadAbortException As String = True
+    Public writeBouncetoLog As String = True
 
     Dim CommServerListener As New TcpListener(IPAddress.Any, port) '20140813
     Dim Timer2 As New System.Timers.Timer(1000)
@@ -71,8 +74,11 @@ Public Class Form1
         strInputDirectory = objIniFile.GetString("Settings", "root", "(none)") ' d:\W3feeds\HL7
         strProblemDirectory = objIniFile.GetString("Settings", "problemfiles", "(none)") '20140910 - d:\problems
 
-        port = objIniFile.GetInteger("Settings", "port", "(0)") ' 2203
+        port = objIniFile.GetInteger("Settings", "port", "(0)") ' 2201
         strLogDirectory = objIniFile.GetString("Settings", "logs", "(none)") '20140921
+        bounceTime = objIniFile.GetInteger("Settings", "bounceTime", "(0)")
+        threadAbortException = objIniFile.GetString("Settings", "threadAbortException", "(none)")
+        writeBouncetoLog = objIniFile.GetString("Settings", "writeBouncetoLog", "(none)")
 
         txtPort.Text = port
         txtInputDirectory.Text = strInputDirectory
@@ -99,7 +105,7 @@ Public Class Form1
         '3600000 ms = 1 hour
         intStartCount = 0
 
-        Dim aTimer As System.Timers.Timer = New System.Timers.Timer(240000) '240000 = 4 minutes
+        Dim aTimer As System.Timers.Timer = New System.Timers.Timer(bounceTime) '240000 = 4 minutes; 20180102 - changed to 1 minute
         AddHandler aTimer.Elapsed, AddressOf OnTimedEvent
         aTimer.Enabled = True
 
@@ -116,20 +122,38 @@ Public Class Form1
         intEndCount = CInt(txtCounter.Text) ' Get the count right now
 
         If intStartCount = intEndCount Then 'No Records returned over the interval so bounce the feed
+            '1/29/2018 - Give option to write to log due to increased bounce interval
+            If writeBouncetoLog = "True" Then
+                WriteToLog("Bounce the feed:" & vbCrLf)
+                writeToError("Bounce the feed: " & txtCounter.Text & vbCrLf) '20140924
+                My.Application.DoEvents()
+                WriteToLog("[" & Now.ToString() & "] Receiver Stopped" & vbCrLf)
+                writeToError("[" & Now.ToString() & "] Receiver Stopped" & vbCrLf) '20140921
+                stopThread()
 
-            WriteToLog("Bounce the feed:" & vbCrLf)
-            writeToError("Bounce the feed: " & txtCounter.Text & vbCrLf) '20140924
-            My.Application.DoEvents()
-            WriteToLog("[" & Now.ToString() & "] Receiver Stopped" & vbCrLf)
-            writeToError("[" & Now.ToString() & "] Receiver Stopped" & vbCrLf) '20140921
-            stopThread()
+                My.Application.DoEvents()
+                WriteToLog("[" & Now.ToString() & "] Receiver Started" & vbCrLf)
+                writeToError("[" & Now.ToString() & "] Receiver Started" & vbCrLf) '20140921
+                txtCounter.Text = "0"
+                intStartCount = 0
+                startThread()
+            Else
+                WriteToLog("Bounce the feed:" & vbCrLf)
+                'writeToError("Bounce the feed: " & txtCounter.Text & vbCrLf) '20140924
+                My.Application.DoEvents()
+                WriteToLog("[" & Now.ToString() & "] Receiver Stopped" & vbCrLf)
+                'writeToError("[" & Now.ToString() & "] Receiver Stopped" & vbCrLf) '20140921
+                stopThread()
 
-            My.Application.DoEvents()
-            WriteToLog("[" & Now.ToString() & "] Receiver Started" & vbCrLf)
-            writeToError("[" & Now.ToString() & "] Receiver Started" & vbCrLf) '20140921
-            txtCounter.Text = "0"
-            intStartCount = 0
-            startThread()
+                My.Application.DoEvents()
+                WriteToLog("[" & Now.ToString() & "] Receiver Started" & vbCrLf)
+                'writeToError("[" & Now.ToString() & "] Receiver Started" & vbCrLf) '20140921
+                txtCounter.Text = "0"
+                intStartCount = 0
+                startThread()
+
+            End If
+
 
 
         Else ' numbers are different so reset the strt count to what it is now for the next comparison.
@@ -362,7 +386,11 @@ Public Class Form1
 
         Catch tEx As ThreadAbortException
             ' Ignore this type of error since we manually stopped the thread
-            writeToException("[" & Now.ToString() & "] Thread Abort Exception:" & vbCrLf & tEx.Message & vbCrLf) '20140921
+            ' 1/29/2018 - Add ability to write/not write this exception to the log do to shortened bounce intervals
+            If threadAbortException = "True" Then
+                writeToException("[" & Now.ToString() & "] Thread Abort Exception:" & vbCrLf & tEx.Message & vbCrLf) '20140921
+            End If
+
         Catch ex As Exception
             WriteToLog(vbCrLf & vbCrLf & "***ERROR (ReceiveMessages): " & ex.ToString() & vbCrLf)
             writeToException(vbCrLf & vbCrLf & "***ERROR (ReceiveMessages): " & ex.ToString() & vbCrLf)
@@ -371,13 +399,26 @@ Public Class Form1
             writeToException("location = " & location.ToString & vbCrLf) '20140928 added
             '20100105 added code below to restart on error
 
+            '20180102 get line number of exception
+            'Dim Result As String
+            'Dim hr As Integer = Runtime.InteropServices.Marshal.GetHRForException(ex)
+            'Result = ex.GetType.ToString & "(0x" & hr.ToString("X8") & "): " & ex.Message & Environment.NewLine & ex.StackTrace & Environment.NewLine
+            'Dim st As StackTrace = New StackTrace(ex, True)
+            'For Each sf As StackFrame In st.GetFrames
+            '    If sf.GetFileLineNumber() > 0 Then
+            '        Result &= "Line:" & sf.GetFileLineNumber() & " Filename: " & IO.Path.GetFileName(sf.GetFileName) & Environment.NewLine
+            '    End If
+            'Next
+
+            'writeToException("Exception Notes = " & Result.ToString & vbCrLf)
+
             'stopThread() '20140921
             My.Application.DoEvents()
             'startThread() '20140921
             My.Application.DoEvents()
 
         Finally
-
+            'client.Close()
             '20140413 - removed thread restart if no error.
             'stopThread()
             'My.Application.DoEvents()
@@ -460,7 +501,8 @@ Public Class Form1
         objTStreamCounter.Close()
 
         'write the  file to "d:\problems" a new HL7 file is created
-        filename = strProblemDirectory & "\HL7." & padleft(Str(intCounter), 3)
+
+        filename = strProblemDirectory & "\HL7.U" & padleft(Str(intCounter), 3)
         objTStreamOutput = File.AppendText(filename)
         objTStreamOutput.Writeline(strLTWOutput)
         objTStreamOutput.Close()
@@ -500,7 +542,8 @@ Public Class Form1
         objTStreamCounter.Close()
 
         'write the  file to "c:\feeds" a new HL7 file is created
-        filename = strInputDirectory & "\HL7." & padleft(Str(intCounter), 3)
+        '1/29/2018 - Added a U to insure that duplicate file numbers don't get created 
+        filename = strInputDirectory & "\HL7.U" & padleft(Str(intCounter), 3)
         objTStreamOutput = File.AppendText(filename)
         objTStreamOutput.Writeline(strLTWOutput)
         objTStreamOutput.Close()
